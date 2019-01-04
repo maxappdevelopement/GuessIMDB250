@@ -40,6 +40,8 @@ public class TMDbLoopjTask {
     }
 
     public void executeLoopjCall(String queryTerm) {
+        queryTerm = handleExeption(queryTerm);
+        Log.d(TAG, "executeLoopjCall: " + queryTerm);
         requestParams.put("s", queryTerm);
         asyncHttpClient.get(BASE_URL + queryTerm, new JsonHttpResponseHandler() {
             @Override
@@ -68,6 +70,11 @@ public class TMDbLoopjTask {
         return  "https://image.tmdb.org/t/p/w500" + url;
     }
 
-
+    public String handleExeption(String queryTerm) {
+        if (queryTerm.equals("Taare Zameen Par")) {
+            return "Like Stars on Earth";
+        }
+        return queryTerm;
+    }
 }
 

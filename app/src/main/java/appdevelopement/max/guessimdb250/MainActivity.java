@@ -1,14 +1,26 @@
 package appdevelopement.max.guessimdb250;
 
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
-import android.widget.Button;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,14 +28,12 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import es.dmoral.toasty.Toasty;
-
 
 public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnLoopjCompleted,
-        OMDbLoopjTask.OnLoopjCompleted, GridViewAnswerAdapter.OnAnswerCorrectCallback
-{
+        OMDbLoopjTask.OnLoopjCompleted, GridViewAnswerAdapter.OnAnswerCorrectCallback {
 
     ArrayList<String> top250List = new ArrayList<String>();
+
     public TMDbLoopjTask mTMDbLoopjTask;
     public OMDbLoopjTask mOMDbLoopjTask;
 
@@ -31,22 +41,33 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
 
     public GridViewAnswerAdapter answerAdapter;
     public GridViewSuggestAdapter suggestAdapter;
-    public GridView gridViewAnswer,gridViewSuggest;
-    public Button btnSubmit;
+    public GridView gridViewAnswer, gridViewSuggest;
 
-    public TextView question;
+    public TextView question, tries;
 
     public char[] answer;
 
     String title, poster, director, actors, year, rating, ranking;
+
+    SharedPreferences sharedPreferences;
+
+    Animation mRotateAnim;
+
+    Toast mToastToShow;
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        sharedPreferences = this.getSharedPreferences("appdevelopement.max.guessimdb250", Context.MODE_PRIVATE);
 
-        top250List = createTitles(); //index will be where in the top250 the film is
+
+        FireBase fb = new FireBase();
+        fb.calculateTotalTriesAverage();
+
+        top250List = createTitles();
 
         //get json info
         mTMDbLoopjTask = new TMDbLoopjTask(this, this);
@@ -58,57 +79,17 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
     }
 
     private void initView() {
-        gridViewAnswer = (GridView)findViewById(R.id.gridViewAnswer);
-        gridViewSuggest = (GridView)findViewById(R.id.gridViewSuggest);
+        gridViewAnswer = (GridView) findViewById(R.id.gridViewAnswer);
+        gridViewSuggest = (GridView) findViewById(R.id.gridViewSuggest);
 
         question = findViewById(R.id.questionText);
+        tries = findViewById(R.id.avarageTries);
+        float averageTries = sharedPreferences.getFloat("averageTries", 0);
+        tries.setText("Tries: " + Common.tries + " (avg: " + averageTries + ")");
 
-        //Add SetupList Here
+        //Add SetupList
         setupList();
-        // TODO: 2018-12-30 fixa så att man kommer direkt till rätt svar när fråga är svarad på
-        // TODO: 2018-12-30 kolla så att du kan få ut XML från apk. Gör några snygga effekter då
-        /*
-        btnSubmit = (Button)findViewById(R.id.btnSubmit);
-        btnSubmit.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
 
-                String result="";
-                for(int i=0;i< Common.user_submit_answer.length;i++) {
-                    result += String.valueOf(Common.user_submit_answer[i]);
-                }
-
-                if(result.equals(title.toLowerCase()))
-                {
-                    Toasty.success(getApplicationContext(),"Finish! This is "+result,Toast.LENGTH_SHORT).show();
-
-                    createResultIntent();
-
-                    //Reset
-                    Common.count = 0;
-                    Common.user_submit_answer = new char[title.length()];
-
-                    //Set Adapter
-                    GridViewAnswerAdapter answerAdapter = new GridViewAnswerAdapter(setupNullList(),getApplicationContext());
-                    gridViewAnswer.setAdapter(answerAdapter);
-                    answerAdapter.notifyDataSetChanged();
-
-                    GridViewSuggestAdapter suggestAdapter = new GridViewSuggestAdapter(suggestSource,getApplicationContext(),MainActivity.this);
-                    gridViewSuggest.setAdapter(suggestAdapter);
-                    suggestAdapter.notifyDataSetChanged();
-
-                    setupList();
-
-
-                }
-                else
-                {
-                    Toasty.error(MainActivity.this,"Incorrect!",Toast.LENGTH_SHORT, true).show();
-                    //Toast.makeText(MainActivity.this, "Incorrect!", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-        */
     }
 
     private void createResultIntent() {
@@ -129,23 +110,27 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
 
         Random rand = new Random();
         int film = rand.nextInt(top250List.size());
+
         ranking = Integer.toString(film);
 
         // SET QUESTION
         mTMDbLoopjTask.executeLoopjCall(top250List.get(film));
         mOMDbLoopjTask.executeLoopjCall(top250List.get(film));
 
-        title =  top250List.get(film); //"The Usual Suspects";
+        title = top250List.get(film); //"Jaws";
 
+        if (film == 59 || film == 220) {
+            title = handleException(film);
+        }
         //Transform correct answer to char array
         answer = title.toLowerCase().toCharArray();
         Common.user_submit_answer = new char[answer.length];
 
+
         //Add Answer character to List
         suggestSource.clear();
-        for(char item:answer)
-        {
-            if (item!=' ') {
+        for (char item : answer) {
+            if (item != ' ') {
                 if (!suggestSource.contains(String.valueOf(item))) {
                     //Add answer name to list and do not include whitespace
                     suggestSource.add(String.valueOf(item).toLowerCase());
@@ -154,7 +139,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
         }
 
         //Random add some character to list/ownmade keyboard
-        for(int i = answer.length;i<answer.length*2;i++) {
+        for (int i = answer.length; i < answer.length * 2; i++) {
 
             String randomLetter = String.valueOf(Common.alphabet_character[rand.nextInt(Common.alphabet_character.length)]);
 
@@ -167,9 +152,9 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
         Collections.shuffle(suggestSource);
 
         //Set for GridView
-        answerAdapter = new GridViewAnswerAdapter(setupNullList(),this, title, this);
-        answerAdapter = new GridViewAnswerAdapter(Common.user_submit_answer,this, title, this);
-        suggestAdapter = new GridViewSuggestAdapter(suggestSource,this,this);
+        answerAdapter = new GridViewAnswerAdapter(setupNullList(), this, title, this);
+        answerAdapter = new GridViewAnswerAdapter(Common.user_submit_answer, this, title, this);
+        suggestAdapter = new GridViewSuggestAdapter(suggestSource, this, this);
 
         answerAdapter.notifyDataSetChanged();
         suggestAdapter.notifyDataSetChanged();
@@ -179,13 +164,23 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
 
     }
 
+    private String handleException(int film) {
+        if (film == 59) {
+            return "Dr. Strangelove";
+        } else if (film == 220) {
+            return "Monsters Inc.";
+        }
+        return "";
+    }
+
     private char[] setupNullList() {
         char result[] = new char[answer.length];
-        // TODO: 2018-12-28 if JSON plot contains correct answer, replace characters
-        // TODO: 2018-12-31 fixa lagg när man knappar in, pga av för mkt kod per tryck
+
         // TODO: 2018-12-30 "the wages of fear" misses its picture
-        // TODO: 2018-12-30 delay when intent creates
-        for(int i=0;i<answer.length;i++) {
+        // TODO: 2019-01-01 fix so that if Jsonobject is null, then dont display
+        // TODO: 2019-01-04 get buttons to maximum display 8 x 3
+
+        for (int i = 0; i < answer.length; i++) {
             if (answer[i] == ' ') {
                 Common.user_submit_answer[i] = ' ';
             }
@@ -195,9 +190,9 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
     }
 
     private ArrayList<String> createTitles() {
-        // TODO: 2018-12-29 Oldboy hämnden, eller Revenge, crashar pga ändrat namn.
+
         String test = "  Rank & Title\tIMDb Rating\tYour Rating\t\n" +
-                " Dummy Movie\t0. Dummy Movie (1998)\t9,0\t\t\n" +
+                " Dummy Score\t0. Dummy Score (1998)\t9,0\t\t\n" +
                 " The Shawshank Redemption\t1. The Shawshank Redemption (1994)\t9,2\t\t\n" +
                 " The Godfather\t2. The Godfather (1972)\t9,2\t\t\n" +
                 " The Godfather: Part II\t3. The Godfather: Part II (1974)\t9,0\t\t\n" +
@@ -208,7 +203,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
                 " Pulp Fiction\t8. Pulp Fiction (1994)\t8,9\t\t\n" +
                 " The Good, the Bad and the Ugly\t9. The Good, the Bad and the Ugly (1966)\t8,8\t\t\n" +
                 " Fight Club\t10. Fight Club (1999)\t8,8\t\t\n" +
-                " Sagan om ringen: Härskarringen\t11. Sagan om ringen: Härskarringen (2001)\t8,8\t\t\n" +
+                " The Lord of the Rings: The Fellowship of the Ring\t11. The Lord of the Rings: The Fellowship of the Ring (2001)\t8,8\t\t\n" +
                 " Forrest Gump\t12. Forrest Gump (1994)\t8,7\t\t\n" +
                 " Star Wars: Episode V - The Empire Strikes Back\t13. Star Wars: Episode V - The Empire Strikes Back (1980)\t8,7\t\t\n" +
                 " Inception\t14. Inception (2010)\t8,7\t\t\n" +
@@ -265,7 +260,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
                 " Witness for the Prosecution\t65. Witness for the Prosecution (1957)\t8,4\t\t\n" +
                 " American Beauty\t66. American Beauty (1999)\t8,4\t\t\n" +
                 " The Dark Knight Rises\t67. The Dark Knight Rises (2012)\t8,3\t\t\n" +
-                " Old Boy - Revenge\t68. Old Boy - Revenge (2003)\t8,3\t\t\n" +
+                " Old Boy - Revenge\t68. OldBoy (2003)\t8,3\t\t\n" +
                 " Aliens\t69. Aliens (1986)\t8,3\t\t\n" +
                 " Once Upon a Time in America\t70. Once Upon a Time in America (1984)\t8,3\t\t\n" +
                 " Coco\t71. Coco (2017)\t8,3\t\t\n" +
@@ -460,9 +455,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
                 top250List.add(m.group(1));
             }
         }
-
         return top250List;
-
     }
 
     @Override
@@ -472,7 +465,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
 
     @Override
     public void taskImageCompleted(String results) {
-       poster = results;
+        poster = results;
     }
 
     @Override
@@ -498,27 +491,175 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
     @Override
     public void answerCorrectCallback(String result) {
 
-        Toasty.success(getApplicationContext(),"Finish! This is "+result,Toast.LENGTH_SHORT).show();
+        int duration;
 
-        // TODO: 2018-12-31 add to watchlist funktion när man kommer till
-        createResultIntent();
+        if (Common.displayCompareTries < 3) {
+            duration = 2300;
+            Common.displayCompareTries++;
+        } else {
+            duration = 4500;
+            Common.displayCompareTries = 0;
+        }
 
-        //Reset
-        Common.count = 0;
-        Common.user_submit_answer = new char[title.length()];
+            setAverageTries();
 
-        //Set Adapter
-        GridViewAnswerAdapter answerAdapter = new GridViewAnswerAdapter(setupNullList(),getApplicationContext());
-        gridViewAnswer.setAdapter(answerAdapter);
-        answerAdapter.notifyDataSetChanged();
+            FireBase fb = new FireBase();
+            fb.addTriesToFireBase(sharedPreferences.getFloat("averageTries", 0), Utils.getUniqeID(this));
 
-        GridViewSuggestAdapter suggestAdapter = new GridViewSuggestAdapter(suggestSource,getApplicationContext(),MainActivity.this);
-        gridViewSuggest.setAdapter(suggestAdapter);
-        suggestAdapter.notifyDataSetChanged();
+            makeToast(result, duration);
 
-        setupList();
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+
+                    createResultIntent();
+
+                }
+            }, duration);
+
+
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+
+                    //Reset
+                    Common.count = 0;
+                    Common.tries = 0;
+                    Common.user_submit_answer = new char[title.length()];
+
+                    //Set Adapter
+                    GridViewAnswerAdapter answerAdapter = new GridViewAnswerAdapter(setupNullList(), getApplicationContext());
+                    gridViewAnswer.setAdapter(answerAdapter);
+                    answerAdapter.notifyDataSetChanged();
+
+                    GridViewSuggestAdapter suggestAdapter = new GridViewSuggestAdapter(suggestSource, getApplicationContext(), MainActivity.this);
+                    gridViewSuggest.setAdapter(suggestAdapter);
+                    suggestAdapter.notifyDataSetChanged();
+
+                    setupList();
+
+                }
+            }, duration + 500);
+        }
+
+    private void setAverageTries() {
+        int totalTries = sharedPreferences.getInt("totalTries", 0);
+        int newTotalTries = Common.tries + totalTries;
+        sharedPreferences.edit().putInt("totalTries", newTotalTries).apply();
+
+        int totalRounds = sharedPreferences.getInt("totalRounds", 0);
+        int newTotalRounds = totalRounds + 1;
+        sharedPreferences.edit().putInt("totalRounds", newTotalRounds).apply();
+
+        float averageTries = (float) newTotalTries / newTotalRounds;
+
+        DecimalFormat df2 = new DecimalFormat((".#"));
+        sharedPreferences.edit().putFloat("averageTries", Float.parseFloat(df2.format(averageTries))).apply();
+    }
+
+    private void makeToast(String result, int duration) {
+
+        if (duration == 4500) {
+            String extraOrLess;
+            String goodOrBad;
+
+            float userAverage = sharedPreferences.getFloat("averageTries", 0);
+            DecimalFormat numberFormat = new DecimalFormat("#0.0");
+            double comparedUsersAverage = (userAverage - Common.totalAverageTries);
+            Log.d("MUTTAN", "makeToast: " + numberFormat.format(comparedUsersAverage));
+
+            if (comparedUsersAverage < 0.0) {
+                extraOrLess = " less";
+                goodOrBad = "Well done!";
+            } else {
+                extraOrLess = " additional";
+                goodOrBad = "Keep at it!";
+            }
+
+            mToastToShow = Toast.makeText(getApplicationContext(), result.substring(0,1)
+                    .toUpperCase() + result.substring(1) +
+                    " is correct! You have " + numberFormat.format(comparedUsersAverage) + extraOrLess +
+                    " tries compared to the useraverage. " + goodOrBad, Toast.LENGTH_LONG);
+        } else {
+
+            mToastToShow = Toast.makeText(getApplicationContext(), result.substring(0,1)
+                            .toUpperCase() + result.substring(1) +
+                    " is correct!", Toast.LENGTH_LONG);
+        }
+
+        mToastToShow.setGravity(Gravity.CENTER, 0, 0);
+        LinearLayout toastContentView = (LinearLayout) mToastToShow.getView();
+
+       // TextView tv =new TextView(this);
+       // tv.setTextSize(20);
+       // tv.setText("My Custom Toast at Bottom of Screen");
+       // toastContentView.addView(tv, 0);
+
+        ImageView imageView = new ImageView(getApplicationContext());
+        imageView.setImageResource(R.drawable.successstar);
+        toastContentView.addView(imageView, 0);
+        mRotateAnim = AnimationUtils.loadAnimation(this, R.anim.scale_rotate_animation);
+        imageView.startAnimation(mRotateAnim);
+
+
+        final int toastDurationInMilliSeconds = duration;
+        CountDownTimer toastCountDown;
+        toastCountDown = new CountDownTimer(toastDurationInMilliSeconds, 1000 ) {
+            public void onTick(long millisUntilFinished) {
+                Log.d("TICKer", "onTick: " + millisUntilFinished);
+                mToastToShow.show();
+            }
+            public void onFinish() {
+                mToastToShow.cancel();
+            }
+        };
+
+
+        mToastToShow.show();
+        toastCountDown.start();
+
+/*
+
+        LinearLayout layout = new LinearLayout(this);
+
+        TextView tv= new TextView(this);
+        tv.setTextSize(15);
+        tv.setGravity(Gravity.CENTER_VERTICAL);
+
+        // set the text you want to show in  Toast
+        tv.setText("My Custom Toast at Bottom of Screen");
+
+        ImageView imageView = new ImageView(getApplicationContext());
+        imageView.setImageResource(R.drawable.successstar);
+        layout.addView(imageView, 0);
+        mRotateAnim = AnimationUtils.loadAnimation(this, R.anim.scale_rotate_animation);
+        imageView.startAnimation(mRotateAnim);
+
+        layout.addView(tv);
+
+        Toast toast=new Toast(this); //context is object of Context write "this" if you are an Activity
+        // Set The layout as Toast View
+        toast.setView(layout);
+
+        // Position you toast here toast position is 50 dp from bottom you can give any integral value
+        toast.setGravity(Gravity.CENTER, 0, 0);
+        toast.show();
+
+*/
 
 
     }
-}
 
+
+
+
+
+
+
+
+    // TODO: 2019-01-04 fixa undantag härskarringen
+
+
+
+}

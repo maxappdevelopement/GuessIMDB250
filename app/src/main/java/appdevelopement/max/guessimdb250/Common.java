@@ -2,6 +2,9 @@ package appdevelopement.max.guessimdb250;
 
 public class Common {
     public static char[] user_submit_answer;
+    public static int tries = 0;
+    public static double totalAverageTries = 0;
+    public static int displayCompareTries = 0;
     public static int count=1;
     public static String[] alphabet_character={
             "a","b","c","d","e","f","g","h","i","j","k","l",

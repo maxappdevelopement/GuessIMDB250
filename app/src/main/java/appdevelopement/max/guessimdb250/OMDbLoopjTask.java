@@ -40,6 +40,8 @@ public class OMDbLoopjTask {
     }
 
     public void executeLoopjCall(String queryTerm) {
+        queryTerm = handleExeption(queryTerm);
+        Log.d(TAG, "executeLoopjCall: " + queryTerm);
         requestParams.put("s", queryTerm);
         asyncHttpClient.get(BASE_URL + queryTerm, new JsonHttpResponseHandler() {
             @Override
@@ -67,5 +69,12 @@ public class OMDbLoopjTask {
                 Log.e(TAG, "onFailure: " + errorResponse);
             }
         });
+    }
+
+    public String handleExeption(String queryTerm) {
+        if (queryTerm.equals("Taare Zameen Par")) {
+            return "Like Stars on Earth";
+        }
+        return queryTerm;
     }
 }

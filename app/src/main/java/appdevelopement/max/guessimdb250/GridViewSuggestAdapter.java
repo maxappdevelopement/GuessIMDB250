@@ -1,7 +1,9 @@
 package appdevelopement.max.guessimdb250;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -86,6 +88,13 @@ public class GridViewSuggestAdapter extends BaseAdapter {
                         else // else
                         {
                             //Remove from suggest source
+                            SharedPreferences sharedPreferences = context.getSharedPreferences
+                                            ("appdevelopement.max.guessimdb250", Context.MODE_PRIVATE);
+                            float averageTries = sharedPreferences.getFloat("averageTries", 0);
+                            Common.tries++;
+                            mainActivity.tries.setText("Tries: " + Common.tries + " (avg: " + averageTries + ")");
+
+                            Log.d("WRONGANSWER", "onClick: " + Common.tries);
                             mainActivity.suggestSource.set(position,"null");
                             mainActivity.suggestAdapter = new GridViewSuggestAdapter(mainActivity.suggestSource,context,mainActivity);
                             mainActivity.gridViewSuggest.setAdapter(mainActivity.suggestAdapter);

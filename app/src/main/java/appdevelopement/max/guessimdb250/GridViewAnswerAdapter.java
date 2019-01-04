@@ -23,8 +23,10 @@ public class GridViewAnswerAdapter extends BaseAdapter {
 
     private String title;
     private char[] answerCharacter;
+    private int tries;
     private Context context;
     OnAnswerCorrectCallback listener;
+    boolean hasReturnedCallBack = false;
 
 
     public GridViewAnswerAdapter(char[] answerCharacter, Context context) {
@@ -59,12 +61,11 @@ public class GridViewAnswerAdapter extends BaseAdapter {
        Button button;
         if(convertView == null) {
 
+
             //Create new button
             button = new Button(context);
             button.setLayoutParams(new GridView.LayoutParams(50,85));
 
-            Log.d("SEEANSWER", "getView: " + Arrays.toString(answerCharacter));
-            Log.d("WHATISTITLE", "getView: " + title);
             //String next at
             button.setPadding(0,2,0,2);
             button.setBackgroundColor(Color.BLUE);
@@ -74,27 +75,29 @@ public class GridViewAnswerAdapter extends BaseAdapter {
             }
             button.setText(String.valueOf(answerCharacter[position]));
 
-            Log.d("CHECKLENGHT", "getView: " + Common.user_submit_answer);
-            if (title.length()==Common.user_submit_answer.length) {
-
-                checkAnswer();
-            }
+            checkAnswer();
 
 
         } else
+
             button=(Button)convertView;
         return button;
     }
 
     public void checkAnswer() {
-        String result="";
+
+        StringBuilder sb = new StringBuilder();
         for(int i=0;i< Common.user_submit_answer.length;i++) {
-            result += String.valueOf(Common.user_submit_answer[i]);
+            sb.append(String.valueOf(Common.user_submit_answer[i]));
+
+            if (sb.toString().equals((title.toLowerCase())) && !hasReturnedCallBack) {
+                hasReturnedCallBack = true;
+                listener.answerCorrectCallback(sb.toString());
+            }
         }
 
-        if(result.equals(title.toLowerCase()))
-        {
-           listener.answerCorrectCallback(result);
-        }
     }
+
+
+
 }
