@@ -3,6 +3,7 @@ package appdevelopement.max.guessimdb250;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.LightingColorFilter;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -47,17 +48,22 @@ public class GridViewSuggestAdapter extends BaseAdapter {
             if(suggestSource.get(position).equals("null"))
             {
                 button = new Button(context);
-                button.setLayoutParams(new GridView.LayoutParams(85,85));
+                button.setLayoutParams(new GridView.LayoutParams(120,120));
                 button.setPadding(8,8,8,8);
                 button.setBackgroundColor(Color.DKGRAY);
             }
             else
             {
                 button = new Button(context);
-                button.setLayoutParams(new GridView.LayoutParams(85,85));
+                button.setLayoutParams(new GridView.LayoutParams(120,120));
                 button.setPadding(8,8,8,8);
                 button.setBackgroundColor(Color.DKGRAY);
-                button.setTextColor(Color.YELLOW);
+
+                button.setTextColor(Color.parseColor("#442C2E"));
+                button.setTextSize(20);
+                button.setBackgroundResource(R.drawable.rounded_corner);
+                button.getBackground().setColorFilter(new LightingColorFilter(0xFFFFFFFF, 0x442C2E));
+
                 button.setText(suggestSource.get(position));
                 button.setOnClickListener(new View.OnClickListener() {
                     @Override

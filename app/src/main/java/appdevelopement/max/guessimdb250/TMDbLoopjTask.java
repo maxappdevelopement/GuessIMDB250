@@ -11,8 +11,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import cz.msebera.android.httpclient.Header;
+import es.dmoral.toasty.Toasty;
 
 public class TMDbLoopjTask {
+
 
     public interface OnLoopjCompleted {
         void taskPlotCompleted(String results);
@@ -53,6 +55,8 @@ public class TMDbLoopjTask {
 
                 } catch (JSONException e) {
                     e.printStackTrace();
+
+
                 }
                 loopjListener.taskPlotCompleted(jsonPlot);
                 loopjListener.taskImageCompleted(convertPosterPath(jsonImage));
@@ -73,6 +77,10 @@ public class TMDbLoopjTask {
     public String handleExeption(String queryTerm) {
         if (queryTerm.equals("Taare Zameen Par")) {
             return "Like Stars on Earth";
+        } else if (queryTerm.equals("Downfall")) {
+            return "Der untergang";
+        } else if (queryTerm.equals("The Nights of Cabiria")) {
+            return "Nights of Cabiria";
         }
         return queryTerm;
     }

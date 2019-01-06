@@ -1,6 +1,7 @@
 package appdevelopement.max.guessimdb250;
 
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -22,6 +23,7 @@ public class ResultActivity extends AppCompatActivity implements TMDbLoopjTask.O
     ImageView nextQuestionBtn;
     TextView displayTitle, displayDirector, displayActors, displayYear, displayRating;
     String title, poster, director, actors, year, rating, ranking;
+    Typeface mTypeface;
 
     final int radius = 12;
     final int margin = 12;
@@ -50,6 +52,12 @@ public class ResultActivity extends AppCompatActivity implements TMDbLoopjTask.O
         Picasso.get().load(poster).
                 transform(transformation).
                 into(image);
+
+        mTypeface = Typeface.createFromAsset(getAssets(), "fonts/CormorantGaramond-Bold.ttf");
+        displayDirector.setTypeface(mTypeface);
+        displayActors.setTypeface(mTypeface);
+        displayYear.setTypeface(mTypeface);
+        displayRating.setTypeface(mTypeface);
 
         displayDirector.setText("Director: " + director);
         displayActors.setText("Stars: " + displayActors(actors));
@@ -91,4 +99,5 @@ public class ResultActivity extends AppCompatActivity implements TMDbLoopjTask.O
         String toPutInPicasso = results;
         Log.d("GETURL", "taskImageCompleted: ");
     }
+
 }

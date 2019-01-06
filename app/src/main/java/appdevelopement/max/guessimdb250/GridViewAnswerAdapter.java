@@ -2,6 +2,7 @@ package appdevelopement.max.guessimdb250;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.LightingColorFilter;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -64,12 +65,14 @@ public class GridViewAnswerAdapter extends BaseAdapter {
 
             //Create new button
             button = new Button(context);
-            button.setLayoutParams(new GridView.LayoutParams(50,85));
+            button.setLayoutParams(new GridView.LayoutParams(70,80));
 
             //String next at
             button.setPadding(0,2,0,2);
-            button.setBackgroundColor(Color.BLUE);
-            button.setTextColor(Color.YELLOW);
+            //button.setBackgroundColor(Color.parseColor("#724a4d"));
+            button.getBackground().setColorFilter(new LightingColorFilter(0xFFFFFFFF, 0x724a4d));
+            button.setBackgroundResource(R.drawable.less_rounded_corner);
+            button.setTextColor((Color.WHITE));
             if (answerCharacter[position]==' ') {
                 button.setVisibility(View.INVISIBLE);
             }

@@ -74,7 +74,7 @@ public class OMDbLoopjTask {
     public String handleExeption(String queryTerm) {
         if (queryTerm.equals("Taare Zameen Par")) {
             return "Like Stars on Earth";
-        }
+    }
         return queryTerm;
     }
 }

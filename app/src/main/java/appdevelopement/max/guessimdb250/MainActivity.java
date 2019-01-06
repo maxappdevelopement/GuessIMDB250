@@ -4,14 +4,14 @@ package appdevelopement.max.guessimdb250;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Gravity;
-import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.GridView;
@@ -52,9 +52,10 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
     SharedPreferences sharedPreferences;
 
     Animation mRotateAnim;
-
     Toast mToastToShow;
+    Typeface mTypeface;
 
+    ArrayList<Film> filmArray;
 
 
     @Override
@@ -63,15 +64,21 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
         setContentView(R.layout.activity_main);
         sharedPreferences = this.getSharedPreferences("appdevelopement.max.guessimdb250", Context.MODE_PRIVATE);
 
-
         FireBase fb = new FireBase();
         fb.calculateTotalTriesAverage();
+
+
+
 
         top250List = createTitles();
 
         //get json info
         mTMDbLoopjTask = new TMDbLoopjTask(this, this);
         mOMDbLoopjTask = new OMDbLoopjTask(this, this);
+
+
+
+
 
         //Init View
         initView();
@@ -83,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
         gridViewSuggest = (GridView) findViewById(R.id.gridViewSuggest);
 
         question = findViewById(R.id.questionText);
+        question.setMovementMethod(new ScrollingMovementMethod());
         tries = findViewById(R.id.avarageTries);
         float averageTries = sharedPreferences.getFloat("averageTries", 0);
         tries.setText("Tries: " + Common.tries + " (avg: " + averageTries + ")");
@@ -111,15 +119,23 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
         Random rand = new Random();
         int film = rand.nextInt(top250List.size());
 
+
+
         ranking = Integer.toString(film);
 
         // SET QUESTION
         mTMDbLoopjTask.executeLoopjCall(top250List.get(film));
         mOMDbLoopjTask.executeLoopjCall(top250List.get(film));
 
+
+
+
+
+
+
         title = top250List.get(film); //"Jaws";
 
-        if (film == 59 || film == 220) {
+        if (film == 59 || film == 220 || film == 245) {
             title = handleException(film);
         }
         //Transform correct answer to char array
@@ -140,6 +156,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
 
         //Random add some character to list/ownmade keyboard
         for (int i = answer.length; i < answer.length * 2; i++) {
+        //for (int i = 0; i <= Common.alphabet_character.length ; i++) {
 
             String randomLetter = String.valueOf(Common.alphabet_character[rand.nextInt(Common.alphabet_character.length)]);
 
@@ -169,6 +186,8 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
             return "Dr. Strangelove";
         } else if (film == 220) {
             return "Monsters Inc.";
+        } else if (film == 245) {
+            return "Pirates of the Caribbean";
         }
         return "";
     }
@@ -179,6 +198,8 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
         // TODO: 2018-12-30 "the wages of fear" misses its picture
         // TODO: 2019-01-01 fix so that if Jsonobject is null, then dont display
         // TODO: 2019-01-04 get buttons to maximum display 8 x 3
+        // TODO: 2019-01-05 fix dummy score
+        // TODO: 2019-01-05 fix så att om filmens namn förekommer i plot blir stjärnor
 
         for (int i = 0; i < answer.length; i++) {
             if (answer[i] == ' ') {
@@ -460,6 +481,8 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
 
     @Override
     public void taskPlotCompleted(String results) {
+        mTypeface = Typeface.createFromAsset(getAssets(), "fonts/CormorantGaramond-SemiBold.ttf");
+        question.setTypeface(mTypeface);
         question.setText(results);
     }
 
@@ -467,6 +490,8 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
     public void taskImageCompleted(String results) {
         poster = results;
     }
+
+
 
     @Override
     public void taskDirectorCompleted(String results) {
@@ -516,7 +541,7 @@ public class MainActivity extends AppCompatActivity implements TMDbLoopjTask.OnL
                     createResultIntent();
 
                 }
-            }, duration);
+            }, duration-500);
 
 
             handler.postDelayed(new Runnable() {
